@@ -9,6 +9,7 @@ env = gym.make('Pendulum-v0')
 replay_memory = []
 old_state = 0
 samples = 10000
+#test
 
 s0 = env.reset()
 for i in range(samples):
