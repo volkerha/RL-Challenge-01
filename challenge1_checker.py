@@ -8,11 +8,12 @@ from gym.wrappers.monitor import Monitor
 from challenge1_template import get_model, get_policy
 
 # 1. Learn the model f: s, a -> s', r
-env = Monitor(gym.make('Pendulum-v0'), 'training', video_callable=False)
+env = Monitor(gym.make('Pendulum-v0'), 'training', video_callable=False,force=True)
 env.seed(98251624)
 max_num_samples = 10000
 model = get_model(env, max_num_samples)
 env.close()
+#env.env.close()
 
 # Your model will be tested on the quality of prediction
 obs = env.reset()
@@ -22,7 +23,7 @@ nobs_pred, rwd_pred = model(obs, act)
 print(f'truth = {nobs, rwd}\nmodel = {nobs_pred, rwd_pred}')
 
 # 2. Perform dynamic programming using the learned model
-env = Monitor(gym.make('Pendulum-v0'), 'evaluation')
+env = Monitor(gym.make('Pendulum-v0'), 'evaluation',force=True)
 env.seed(31186490)
 policy = get_policy(model, env.observation_space, env.action_space)
 
@@ -37,3 +38,4 @@ for _ in range(n_eval_episodes):
 av_ep_ret = sum(env.get_episode_rewards()) / len(env.get_episode_rewards())
 print(f'average return per episode: {av_ep_ret}')
 env.close()
+#env.env.close()

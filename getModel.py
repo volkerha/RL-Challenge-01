@@ -52,7 +52,7 @@ def getModelQube(env, samples):
     #print('Dynamic Model score: ',dynamic_score)
 
     #Solve regression to learn reward   
-    X_reward_train = replay_memory[0:int(samples*scale),6:12]
+    X_reward_train = replay_memory[0:int(samples*scale),6:12]    
     Y_reward_train = replay_memory[0:int(samples*scale),13]*100000
 
     X_reward_test = replay_memory[int(samples*scale+1):samples,6:12]
@@ -67,6 +67,8 @@ def getModelQube(env, samples):
 
     reward_model.fit(X_reward_train,Y_reward_train)               
     reward_score = reward_model.score(X_reward_test,Y_reward_test)
+    print(X_reward_test[0])
+    print(reward_model.predict(X_reward_test[0]))
     #print('Reward Model score: ',reward_score)
     return dynamic_model, reward_model
 
@@ -146,7 +148,8 @@ def getModelPendel(env, samples):
 #env.seed(98251624)
 #getModelPendel(env,10000)
 
-env = Monitor(gym.make('Qube-v0'), 'training', video_callable=False, force = True)
-env.seed(98251624)
-getModelQube(env,25000)
+#env = Monitor(gym.make('Qube-v0'), 'training', video_callable=False, force = True)
+
+#env.seed(98251624)
+#getModelQube(env,25000)
 #getModel('Pendulum-v0',10000)

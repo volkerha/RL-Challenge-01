@@ -13,6 +13,7 @@ info = dict(
 import torch
 import torch.nn as nn
 import numpy as np
+from scipy import spatial
 
 
 def get_model(env, max_num_samples):
@@ -90,6 +91,70 @@ def get_model(env, max_num_samples):
                             reward_model(torch.cat((torch.tensor(obs, dtype=torch.float32), torch.tensor(act, dtype=torch.float32)))).detach().numpy()[0])
 
 
+
+
+def discreizeSpace(min_state,max_state, discret_num):
+    discrete_space = []
+    for i in range(0,len(max_state)):
+        min = min_state[i]
+        max = max_state[i]
+        disc_temp = np.linspace(min, max, num=discret_num)
+    
+        discrete_space.append(disc_temp)
+    discrete_space = np.array(discrete_space)
+    return discrete_space.T
+
+def value_iteration(model, observation_space, action_space):
+    discret_states = 500
+    discrete_actions = 3
+    discount_factor = 0.99
+    theta = 0.1
+    max_state = observation_space.high
+    min_state = observation_space.low
+    max_action = action_space.high
+    min_action = action_space.low
+
+    
+
+
+    discrete_state_space = discreizeSpace(min_state,max_state, discret_states)
+    discrete_state_space_tree = spatial.KDTree(discrete_state_space)
+    discrete_action_space = discreizeSpace(min_action,max_action,discrete_actions)
+
+    def lookahead(state, V):
+        A = np.zeros(discrete_actions)
+        for action_idx in range(discrete_actions):
+            obs = state
+            act = discrete_action_space[action_idx]
+            nobs_pred, rwd_pred = model(obs, act)
+            distance, state_id = discrete_state_space_tree.query(nobs_pred)
+            A[action_idx] += rwd_pred + discount_factor * V[state_id]   
+        return A      
+
+    V = np.zeros(discret_states)
+    while True:
+        delta = 0
+        for state in discrete_state_space:
+            A = lookahead(state, V)
+            best_action_reward = np.max(A)
+            distance, state_id = discrete_state_space_tree.query(state)
+            delta = max(delta, np.abs(best_action_reward-V[state_id])) 
+            V[state_id] = best_action_reward
+        print(delta)    
+        if delta < theta:
+            break  
+
+    policy = np.zeros([discret_states, discrete_actions])  
+    for state in discrete_state_space:
+        A = lookahead(state, V)
+        best_action_id = np.argmax(A)
+        distance, state_id = discrete_state_space_tree.query(state)
+        policy[state_id, best_action_id] = 1.0
+
+
+    return policy, discrete_state_space_tree, discrete_action_space
+
+
 def get_policy(model, observation_space, action_space):
     """
     Perform dynamic programming and return the optimal policy.
@@ -99,4 +164,13 @@ def get_policy(model, observation_space, action_space):
     :param action_space: gym.Space
     :return: function pi: s -> a
     """
-    return lambda obs: action_space.high
+    policy, discrete_state_space_tree,discrete_action_space  = value_iteration(model, observation_space, action_space)
+
+    
+    def state2action(obs):
+        distance, state_id  = discrete_state_space_tree.query(obs)       
+        action_id = np.argmax(policy[state_id])     
+        #print('Actions: ', discrete_action_space,'Choosen Actionindex: ', action_id)   
+        return discrete_action_space[action_id]
+    
+    return lambda obs: state2action(obs)
